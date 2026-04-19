@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Boston AI Life Sciences ERP{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Dashboard</h1>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <h3>Suppliers</h3>
+            <p class="stat">{{ dashboard.pending_suppliers }}</p>
+            <p class="stat-label">Active Suppliers</p>
+        </div>
+
+        <div class="card">
+            <h3>Customers</h3>
+            <p class="stat">{{ dashboard.active_customers }}</p>
+            <p class="stat-label">Active Customers</p>
+        </div>
+
+        <div class="card">
+            <h3>Purchase Orders</h3>
+            <p class="stat">{{ dashboard.pending_purchase_orders }}</p>
+            <p class="stat-label">Pending Orders</p>
+        </div>
+
+        <div class="card">
+            <h3>Sales Orders</h3>
+            <p class="stat">{{ dashboard.pending_sales_orders }}</p>
+            <p class="stat-label">Pending Orders</p>
+        </div>
+
+        <div class="card">
+            <h3>Production</h3>
+            <p class="stat">{{ dashboard.active_production_orders }}</p>
+            <p class="stat-label">Active Orders</p>
+        </div>
+
+        <div class="card">
+            <h3>Revenue</h3>
+            <p class="stat">${{ "%.2f"|format(dashboard.total_revenue) }}</p>
+            <p class="stat-label">Total Paid</p>
+        </div>
+
+        <div class="card">
+            <h3>Receivables</h3>
+            <p class="stat">${{ "%.2f"|format(dashboard.total_receivable) }}</p>
+            <p class="stat-label">Outstanding</p>
+        </div>
+    </div>
+
+    {% if dashboard.low_stock_alerts %}
+    <div class="card alerts">
+        <h3>Low Stock Alerts</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Item Type</th>
+                    <th>Item ID</th>
+                    <th>Quantity</th>
+                    <th>Warehouse</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in dashboard.low_stock_alerts %}
+                <tr>
+                    <td>{{ alert.item_type }}</td>
+                    <td>{{ alert.item_id }}</td>
+                    <td>{{ alert.quantity }}</td>
+                    <td>{{ alert.warehouse }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

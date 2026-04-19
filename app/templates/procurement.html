@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Procurement - Boston AI Life Sciences ERP{% endblock %}
+
+{% block content %}
+<div class="module procurement">
+    <h1>Procurement Management</h1>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="suppliers">Suppliers</button>
+        <button class="tab" data-tab="purchase-orders">Purchase Orders</button>
+        <button class="tab" data-tab="materials">Materials</button>
+    </div>
+
+    <div id="suppliers" class="tab-content active">
+        <div class="section-header">
+            <h2>Suppliers</h2>
+            <button class="btn btn-primary" onclick="showSupplierForm()">Add Supplier</button>
+        </div>
+
+        <div id="supplierForm" class="form-modal" style="display: none;">
+            <form id="supplierFormElement">
+                <input type="hidden" id="supplierId">
+                <div class="form-group">
+                    <label for="supplierCode">Code</label>
+                    <input type="text" id="supplierCode" required>
+                </div>
+                <div class="form-group">
+                    <label for="supplierName">Name</label>
+                    <input type="text" id="supplierName" required>
+                </div>
+                <div class="form-group">
+                    <label for="contactPerson">Contact Person</label>
+                    <input type="text" id="contactPerson">
+                </div>
+                <div class="form-group">
+                    <label for="supplierEmail">Email</label>
+                    <input type="email" id="supplierEmail">
+                </div>
+                <div class="form-group">
+                    <label for="supplierPhone">Phone</label>
+                    <input type="text" id="supplierPhone">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn" onclick="hideSupplierForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <table class="data-table" id="suppliersTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Payment Terms</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="purchase-orders" class="tab-content">
+        <div class="section-header">
+            <h2>Purchase Orders</h2>
+            <button class="btn btn-primary" onclick="showPOForm()">Create PO</button>
+        </div>
+
+        <table class="data-table" id="poTable">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Supplier</th>
+                    <th>Date</th>
+                    <th>Expected Delivery</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="materials" class="tab-content">
+        <div class="section-header">
+            <h2>Materials</h2>
+            <button class="btn btn-primary" onclick="showMaterialForm()">Add Material</button>
+        </div>
+
+        <table class="data-table" id="materialsTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Unit</th>
+                    <th>Unit Cost</th>
+                    <th>Reorder Level</th>
+                    <th>Safety Stock</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const API_BASE = '/procurement';
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSuppliers();
+    loadPurchaseOrders();
+    loadMaterials();
+    setupTabs();
+    setupForms();
+});
+
+function setupTabs() {
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+        });
+    });
+}
+
+function setupForms() {
+    document.getElementById('supplierFormElement').addEventListener('submit', saveSupplier);
+}
+
+// Suppliers
+async function loadSuppliers() {
+    const response = await fetch(`${API_BASE}/suppliers`);
+    const data = await response.json();
+    const tbody = document.querySelector('#suppliersTable tbody');
+    tbody.innerHTML = data.suppliers.map(s => `
+        <tr>
+            <td>${s.code}</td>
+            <td>${s.name}</td>
+            <td>${s.contact_person || ''}</td>
+            <td>${s.email || ''}</td>
+            <td>${s.phone || ''}</td>
+            <td>${s.payment_terms || ''}</td>
+            <td><button class="btn btn-small" onclick="editSupplier(${s.id})">Edit</button></td>
+        </tr>
+    `).join('');
+}
+
+function showSupplierForm(supplier = null) {
+    document.getElementById('supplierForm').style.display = 'block';
+    if (supplier) {
+        document.getElementById('supplierId').value = supplier.id;
+        document.getElementById('supplierCode').value = supplier.code;
+        document.getElementById('supplierName').value = supplier.name;
+        document.getElementById('contactPerson').value = supplier.contact_person || '';
+        document.getElementById('supplierEmail').value = supplier.email || '';
+        document.getElementById('supplierPhone').value = supplier.phone || '';
+    }
+}
+
+function hideSupplierForm() {
+    document.getElementById('supplierForm').style.display = 'none';
+    document.getElementById('supplierFormElement').reset();
+}
+
+async function saveSupplier(e) {
+    e.preventDefault();
+    const id = document.getElementById('supplierId').value;
+    const data = {
+        code: document.getElementById('supplierCode').value,
+        name: document.getElementById('supplierName').value,
+        contact_person: document.getElementById('contactPerson').value,
+        email: document.getElementById('supplierEmail').value,
+        phone: document.getElementById('supplierPhone').value
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_BASE}/suppliers/${id}` : `${API_BASE}/suppliers`;
+
+    await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    hideSupplierForm();
+    loadSuppliers();
+}
+
+async function editSupplier(id) {
+    const response = await fetch(`${API_BASE}/suppliers/${id}`);
+    const data = await response.json();
+    showSupplierForm(data.supplier);
+}
+
+// Purchase Orders
+async function loadPurchaseOrders() {
+    const response = await fetch(`${API_BASE}/purchase-orders`);
+    const data = await response.json();
+    const tbody = document.querySelector('#poTable tbody');
+    tbody.innerHTML = data.purchase_orders.map(po => `
+        <tr>
+            <td>${po.order_number}</td>
+            <td>${po.supplier_name}</td>
+            <td>${po.order_date}</td>
+            <td>${po.expected_delivery_date || ''}</td>
+            <td><span class="badge badge-${po.status}">${po.status}</span></td>
+            <td>$${po.total_amount.toFixed(2)}</td>
+            <td><button class="btn btn-small" onclick="viewPO(${po.id})">View</button></td>
+        </tr>
+    `).join('');
+}
+
+async function viewPO(id) {
+    const response = await fetch(`${API_BASE}/purchase-orders/${id}`);
+    const data = await response.json();
+    console.log('PO Details:', data.purchase_order);
+    alert(`PO: ${data.purchase_order.order_number}\nSupplier: ${data.purchase_order.supplier_name}\nStatus: ${data.purchase_order.status}`);
+}
+
+function showPOForm() {
+    alert('PO creation form - implement with modal');
+}
+
+// Materials
+async function loadMaterials() {
+    const response = await fetch(`${API_BASE}/materials`);
+    const data = await response.json();
+    const tbody = document.querySelector('#materialsTable tbody');
+    tbody.innerHTML = data.materials.map(m => `
+        <tr>
+            <td>${m.code}</td>
+            <td>${m.name}</td>
+            <td>${m.unit}</td>
+            <td>$${m.unit_cost.toFixed(2)}</td>
+            <td>${m.reorder_level}</td>
+            <td>${m.safety_stock}</td>
+        </tr>
+    `).join('');
+}
+
+function showMaterialForm() {
+    alert('Material creation form - implement with modal');
+}
+</script>
+{% endblock %}
